@@ -31,4 +31,15 @@ protected:
 	afx_msg void OnPaint();
 	afx_msg HCURSOR OnQueryDragIcon();
 	DECLARE_MESSAGE_MAP()
+
+public:
+	BOOL InitLibrary(void);
+	BOOL AddAxisInfo(void);
+	CString m_strTime;
+	long m_lAxisCount;
+	long m_lAxisNo;
+	DWORD m_dwModuleID;
+
+
+	CComboBox m_ComboTorqueAxis;
 };

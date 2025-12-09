@@ -7,11 +7,33 @@
 #include "01. AS_Function_Example_C++Torque.h"
 #include "01. AS_Function_Example_C++TorqueDlg.h"
 #include "afxdialogex.h"
+#define UI_DATA_CHECK 10
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
 
+#define	TM_DISPLAY		100
+#define	LIBTYPE			4000  //ECAT Lib : 5000  / 범용제품 : 4000 에 따라 선택	
+// ++ =======================================================================
+// >> AXL(AjineXtek Library) 관련 Header파일 포함시킵니다.
+// ※ [CAUTION] 예제를 복사하여 다른 위치에서 실행시 참조경로 변경이 필요합니다.
+// --------------------------------------------------------------------------
+#include <C:\Program Files (x86)\EzSoftware UC\AXL(Library)\C, C++\AXL.h>
+#include <C:\Program Files (x86)\EzSoftware UC\AXL(Library)\C, C++\AXM.h>
+#include <C:\Program Files (x86)\EzSoftware UC\AXL(Library)\C, C++\AXDev.h>
+#include <C:\Program Files (x86)\EzSoftware UC\AXL(Library)\C, C++\AXHS.h>
+#include <C:\Program Files (x86)\EzSoftware UC\AXL(Library)\C, C++\AXHD.h>
+
+// ++ =======================================================================
+// >> AXL(AjineXtek Library) 관련 Library파일을 Link시킵니다.
+// ※ [CAUTION] 예제를 복사하여 다른 위치에서 실행시 참조경로 변경이 필요합니다.
+// --------------------------------------------------------------------------
+#ifdef  _M_X64 
+#pragma comment(lib, "C:/Program Files (x86)/EzSoftware UC/AXL(Library)/Library/64Bit/AXL.lib")
+#else
+#pragma comment(lib, "C:/Program Files (x86)/EzSoftware UC/AXL(Library)/Library/32Bit/AXL.lib")
+#endif
 
 // 응용 프로그램 정보에 사용되는 CAboutDlg 대화 상자입니다.
 
@@ -59,6 +81,7 @@ CMy01ASFunctionExampleCTorqueDlg::CMy01ASFunctionExampleCTorqueDlg(CWnd* pParent
 void CMy01ASFunctionExampleCTorqueDlg::DoDataExchange(CDataExchange* pDX)
 {
 	CDialogEx::DoDataExchange(pDX);
+	DDX_Control(pDX, IDC_COMBO_MoveAxis, m_ComboTorqueAxis);
 }
 
 BEGIN_MESSAGE_MAP(CMy01ASFunctionExampleCTorqueDlg, CDialogEx)
@@ -100,6 +123,12 @@ BOOL CMy01ASFunctionExampleCTorqueDlg::OnInitDialog()
 	SetIcon(m_hIcon, FALSE);		// 작은 아이콘을 설정합니다.
 
 	// TODO: 여기에 추가 초기화 작업을 추가합니다.
+	InitLibrary();
+	AxmInfoGetAxisCount(&m_lAxisCount);
+	if (m_lAxisCount > 1)
+	{
+		AddAxisInfo();
+	}
 
 	return TRUE;  // 포커스를 컨트롤에 설정하지 않으면 TRUE를 반환합니다.
 }
@@ -153,3 +182,85 @@ HCURSOR CMy01ASFunctionExampleCTorqueDlg::OnQueryDragIcon()
 	return static_cast<HCURSOR>(m_hIcon);
 }
 
+
+// ==============================================================================================================================================================
+// >> InitLibrary() : 라이브러리 초기화하는 함수.
+//  - AXL(AjineXtek Library)을 사용가능하게 합니다. 
+//  - AxlOpen        : 라이브러리 내부 파라미터 및 H/W 설정 파라미터의 초기화 후 라이브러리를 사용 가능하도록 준비하는 함수
+//  - AxlOpenNoReset : 라이브러리 내부 파라미터 및 H/W 설정 파라미터의 초기화 과정 없이 라이브러리를 사용 가능하도록 준비하는 함수
+// ==============================================================================================================================================================
+BOOL CMy01ASFunctionExampleCTorqueDlg::InitLibrary(void)
+{
+	//++ AXL(AjineXtek Library)을 사용가능하게 하고 장착된 보드들을 초기화합니다.
+	DWORD dwReturn;
+
+	dwReturn = AxlOpen(7);
+	SYSTEMTIME Time;	GetLocalTime(&Time);
+	m_strTime.Format("%02d:%02d:%02d:%03d -> ", Time.wHour, Time.wMinute, Time.wSecond, Time.wMilliseconds);
+	if (dwReturn != AXT_RT_SUCCESS)
+	{
+		AfxMessageBox("AxlOpen Fail...");
+		return FALSE;
+	}
+	return TRUE;
+}
+
+// ==============================================================================================================================================================
+// >> AddAxisInfo() : 시스템에 장착된 모션축들을 ComboBox에 등록하는 함수.
+//  - 한 개이상의 축이 장착되면 검색된 축들의 정보를 읽어 ComboBox에 등록하여 사용자가 선택 제어할 수 있도록 합니다.
+// ==============================================================================================================================================================
+BOOL CMy01ASFunctionExampleCTorqueDlg::AddAxisInfo(void)
+{
+	CString	strData;
+	DWORD	dwModuleID;
+
+	//++ 유효한 전체 모션축수를 반환합니다.
+	AxmInfoGetAxisCount(&m_lAxisCount);
+	if (m_lAxisCount < 1)	return FALSE;
+
+	m_lAxisNo = 0;
+	//++ 지정한 축의 정보를 반환합니다.
+	// [INFO] 여러개의 정보를 읽는 함수 사용시 불필요한 정보는 NULL(0)을 입력하면 됩니다.
+	AxmInfoGetAxis(m_lAxisNo, NULL, NULL, &m_dwModuleID);
+
+	// 유효한 전체 모션축수의 정보를 읽어 ComboBox에 등록합니다.
+	for (int i = 0; i < m_lAxisCount; i++)
+	{
+		//++ 지정한 축의 정보를 반환합니다.
+		// [INFO] 여러개의 정보를 읽는 함수 사용시 불필요한 정보는 NULL(0)을 입력하면 됩니다.
+		AxmInfoGetAxis(i, NULL, NULL, &dwModuleID);
+		switch (dwModuleID)
+		{
+		case AXT_SMC_R1V04A4:			strData.Format("%02ld-[RTEX-A4N]", i);		break;
+		case AXT_SMC_R1V04A5:			strData.Format("%02ld-[RTEX-A5N]", i);		break;
+		case AXT_SMC_R1V04A6:			strData.Format("%02ld-[RTEX-A6N]", i);		break;
+		case AXT_SMC_R1V04:				strData.Format("%02ld-(RTEX-PM)", i);		break;
+		case AXT_SMC_R1V04PM2Q:			strData.Format("%02ld-(RTEX-PM2Q)", i);		break;
+		case AXT_SMC_R1V04PM2QE:		strData.Format("%02ld-(RTEX-PM2QE)", i);	break;
+		case AXT_SMC_R1V04MLIISV:		strData.Format("%02ld-[MLII-SGDV]", i);		break;
+		case AXT_SMC_R1V04MLIIPM:		strData.Format("%02ld-(MLII-PM)", i);		break;
+		case AXT_SMC_R1V04MLIICL:		strData.Format("%02ld-[MLII-CSDL]", i);		break;
+		case AXT_SMC_R1V04MLIICR:		strData.Format("%02ld-[MLII-CSDH]", i);		break;
+		case AXT_SMC_R1V04SIIIHMIV:		strData.Format("%02ld-(SIIIH-MRJ4)", i);	break;
+		case AXT_SMC_R1V04SIIIHMIV_R:	strData.Format("%02ld-(SIIIH-MRJ4)", i);	break;
+		case AXT_SMC_R1V04PM2QSIIIH:	strData.Format("%02ld-(SIIIH-PM2Q)", i);	break;
+		case AXT_SMC_R1V04PM4QSIIIH:	strData.Format("%02ld-(SIIIH-PM4Q)", i);	break;
+		case AXT_SMC_R1V04MLIIIS7S:		strData.Format("%02ld-(MLIII-SGD7S)", i);	break;
+		case AXT_SMC_R1V04MLIIIS7W:		strData.Format("%02ld-(MLIII-SGD7W)", i);	break;
+		case AXT_SMC_R1V04MLIIIPM:		strData.Format("%02ld-(MLIII-PM)", i);	break;
+#if LIBTYPE == 5000
+		case AXT_ECAT_MOTION:
+		{
+			char szModuleName[50];
+			AxmInfoGetAxisEx(i, NULL, szModuleName, NULL);
+			strData.Format("%02ld-[ECAT-%s]", i, szModuleName);
+			break;
+		}
+		default:	strData.Format("%02ld-[Unknown]", i);
+#elif LIBTYPE == 4000  default:strData.Format("%02ld-[Unknown]",i);
+#endif
+		}
+		m_ComboTorqueAxis.AddString(strData);
+	}
+	return TRUE;
+}
