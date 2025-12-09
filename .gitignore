@@ -1,0 +1,20 @@
+# Visual Studio 임시 폴더 및 빌드 결과물 무시 설정
+.vs/
+Debug/
+Release/
+x64/
+x86/
+build/
+*.vcxproj.user
+*.users
+*.suo
+*.aps
+*.idb
+*.pdb
+*.ipch
+*.log
+*.tlog
+*.obj
+*.res
+*.ilk
+*.pch
