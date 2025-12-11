@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "CRealTimeGraphCtrl.h"   // 그래프 클래스 헤더 포함
 
 // CMy01ASFunctionExampleCTorqueDlg 대화 상자
 class CMy01ASFunctionExampleCTorqueDlg : public CDialogEx
@@ -31,6 +32,12 @@ protected:
 	afx_msg void OnPaint();
 	afx_msg HCURSOR OnQueryDragIcon();
 	DECLARE_MESSAGE_MAP()
+
+protected:
+	// ====== 여기부터 그래프 관련 멤버 ======
+	CRealTimeGraphCtrl m_Graph;   // 전용 그래프 컨트롤
+	double             m_dPhase;  // 테스트용 (sin 파형 위상)
+	// =======================================
 
 public:
 	BOOL InitLibrary(void);

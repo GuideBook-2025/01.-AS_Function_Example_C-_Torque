@@ -7,7 +7,8 @@
 #include "01. AS_Function_Example_C++Torque.h"
 #include "01. AS_Function_Example_C++TorqueDlg.h"
 #include "afxdialogex.h"
-#define UI_DATA_CHECK 10
+#define IDT_TIMER_GRAPH 1
+#define IDT_UI_DATA_CHECK 10
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -74,6 +75,7 @@ END_MESSAGE_MAP()
 
 CMy01ASFunctionExampleCTorqueDlg::CMy01ASFunctionExampleCTorqueDlg(CWnd* pParent /*=nullptr*/)
 	: CDialogEx(IDD_MY01_AS_FUNCTION_EXAMPLE_CTORQUE_DIALOG, pParent)
+	, m_dPhase(0.0)
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
 }
@@ -151,7 +153,7 @@ BOOL CMy01ASFunctionExampleCTorqueDlg::OnInitDialog()
 		ControlInit();
 	}
 
-	SetTimer(UI_DATA_CHECK, 100, NULL);
+	SetTimer(IDT_UI_DATA_CHECK, 100, NULL);
 
 	return TRUE;  // 포커스를 컨트롤에 설정하지 않으면 TRUE를 반환합니다.
 }
@@ -160,7 +162,7 @@ BOOL CMy01ASFunctionExampleCTorqueDlg::OnInitDialog()
 void CMy01ASFunctionExampleCTorqueDlg::OnTimer(UINT_PTR nIDEvent)
 {
 	// TODO: 여기에 메시지 처리기 코드를 추가 및/또는 기본값을 호출합니다.
-	if (nIDEvent == UI_DATA_CHECK)
+	if (nIDEvent == IDT_UI_DATA_CHECK)
 	{
 		double dTorque, dEcatTorque;
 		CString strDataChange;
