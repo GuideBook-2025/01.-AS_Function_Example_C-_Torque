@@ -49,12 +49,21 @@ CRealTimeGraphCtrl::~CRealTimeGraphCtrl()
 	}
 }
 
-void CRealTimeGraphCtrl::OnSize(UINT nType, int cx, int cy)
+void CRealTimeGraphCtrl::PreSubclassWindow()
 {
-	CStatic::OnSize(nType, cx, cy);
-	if (cx <= 0 || cy <= 0)
-		return;
-	// TODO: 여기에 메시지 처리기 코드를 추가합니다.
+	CStatic::PreSubclassWindow();
+
+	CRect rc;
+	GetClientRect(&rc);
+	if (rc.Width() > 0 && rc.Height() > 0)
+	{
+		CClientDC dc(this);
+		RecreateBuffers(rc.Width(), rc.Height(), &dc);
+	}
+}
+
+void CRealTimeGraphCtrl::RecreateBuffers(int cx, int cy, CDC* pRefDC)
+{
 
 	m_rcClient.SetRect(0, 0, cx, cy);
 	CClientDC dc(this);
@@ -62,7 +71,7 @@ void CRealTimeGraphCtrl::OnSize(UINT nType, int cx, int cy)
 	// ++====================================================================
 	// >> 기존 DC/Bitmap 정리
 	// ======================================================================
-	
+
 	// ===========================================
 	// [A] 배경 전용 버퍼
 	// dc 제거
@@ -135,6 +144,19 @@ void CRealTimeGraphCtrl::OnSize(UINT nType, int cx, int cy)
 			m_bMemReady = true;
 		}
 	}
+}
+
+
+
+void CRealTimeGraphCtrl::OnSize(UINT nType, int cx, int cy)
+{
+	CStatic::OnSize(nType, cx, cy);
+	if (cx <= 0 || cy <= 0)
+		return;
+	// TODO: 여기에 메시지 처리기 코드를 추가합니다.
+
+	CClientDC dc(this);
+	RecreateBuffers(cx, cy, &dc);
 }
 
 void CRealTimeGraphCtrl::DrawGridAndAxis(CDC* pDC)
@@ -213,12 +235,12 @@ void CRealTimeGraphCtrl::Initialize(int nMaxPoints, double dMin, double dMax)
 	GetClientRect(&m_rcClient);
 }
 
-void CRealTimeGraphCtrl::AddData(double dValue)
+bool CRealTimeGraphCtrl::AddData(double dValue)
 {
 	// 그래프가 저장할 수 있는 최대 데이터 개수가 유효한지 검사
 	// (0 이하라면 데이터 추가 자체를 수행할 수 없음)
 	if (m_nMaxPoints <= 0)
-		return;
+		return false;
 
 	// 현재 데이터 개수가 최대 개수에 도달한 경우,
 	// 가장 오래된 데이터(맨 앞)를 제거하여 공간 확보
@@ -232,6 +254,8 @@ void CRealTimeGraphCtrl::AddData(double dValue)
 	//  - 여기서는 단순히 다시 그려달라고 Only Invalidate
 	//  - 실제 크기 계산 등은 OnSize에서만 수행하여 불필요한 비용을 제거
 	Invalidate(FALSE);
+
+	return true;
 }
 
 BOOL CRealTimeGraphCtrl::OnEraseBkgnd(CDC* pDC)
@@ -345,3 +369,5 @@ void CRealTimeGraphCtrl::DrawGraph(CDC* pDC)
 	// 사용한 펜 원복
 	pDC->SelectObject(pOldPen);
 }
+
+

@@ -12,7 +12,7 @@ public:
     void Initialize(int nMaxPoints, double dMin, double dMax);
 
     // 실시간 데이터 추가
-    void AddData(double dValue);
+    bool AddData(double dValue);
 
 protected:
     DECLARE_MESSAGE_MAP()
@@ -26,6 +26,8 @@ private:
     void DrawGraph(CDC* pDC);
     int  ValueToY(double dValue) const;
     void DrawGridAndAxis(CDC* pDC);
+	void PreSubclassWindow();
+    void RecreateBuffers(int cx, int cy, CDC* pRefDC);
 
 private:
     // 클라이언트 영역 (OnSize에서만 갱신)
@@ -53,3 +55,5 @@ private:
     CBitmap* m_pOldMemBmp = nullptr;
     bool     m_bMemReady = false;
 };
+
+
