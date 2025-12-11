@@ -59,4 +59,8 @@ public:
 	afx_msg void OnBnClickedBtnTorquestop();
 	CComboBox m_ComboStopMethod;
 	afx_msg void OnBnClickedCheckServoon();
+	afx_msg void OnTimer(UINT_PTR nIDEvent);
+	afx_msg HBRUSH OnCtlColor(CDC* pDC, CWnd* pWnd, UINT nCtlColor);
+	DWORD m_dwAlarmOn;
+	afx_msg void OnBnClickedBtnAlarmclear();
 };

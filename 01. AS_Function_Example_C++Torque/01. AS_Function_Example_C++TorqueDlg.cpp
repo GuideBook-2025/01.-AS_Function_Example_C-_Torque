@@ -106,6 +106,8 @@ BEGIN_MESSAGE_MAP(CMy01ASFunctionExampleCTorqueDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BTN_TorqueStop, &CMy01ASFunctionExampleCTorqueDlg::OnBnClickedBtnTorquestop)
 	ON_BN_CLICKED(IDC_CHECK_ServoOn, &CMy01ASFunctionExampleCTorqueDlg::OnBnClickedCheckServoon)
 	ON_WM_TIMER()
+	ON_WM_CTLCOLOR()
+	ON_BN_CLICKED(IDC_BTN_ALARMCLEAR, &CMy01ASFunctionExampleCTorqueDlg::OnBnClickedBtnAlarmclear)
 END_MESSAGE_MAP()
 
 
@@ -148,10 +150,12 @@ BOOL CMy01ASFunctionExampleCTorqueDlg::OnInitDialog()
 		AddAxisInfo();
 		ControlInit();
 	}
+
 	SetTimer(UI_DATA_CHECK, 100, NULL);
 
 	return TRUE;  // 포커스를 컨트롤에 설정하지 않으면 TRUE를 반환합니다.
 }
+
 
 void CMy01ASFunctionExampleCTorqueDlg::OnTimer(UINT_PTR nIDEvent)
 {
@@ -164,18 +168,21 @@ void CMy01ASFunctionExampleCTorqueDlg::OnTimer(UINT_PTR nIDEvent)
 
 		AxmStatusReadServoLoadRatio(TorqueAxis, &dTorque);
 		strDataChange.Format("%f", dTorque);
-		SetDlgItemText(IDC_EDIT_TORQUE_READ, strDataChange);
-
-
+		SetDlgItemText(IDC_EDIT_TorqueRead, strDataChange);
+		AxmSignalReadServoAlarm(TorqueAxis, &m_dwAlarmOn);
+		if (m_dwAlarmOn)
+		{
+			GetDlgItem(IDC_STATIC_ALARM)->Invalidate();
+		}
 #if LIBTYPE == 5000
 		AxmStatusReadTorque(TorqueAxis, &dEcatTorque);
 		strDataChange.Format("%f", dEcatTorque);
 		SetDlgItemText(IDC_EDIT_ECAT_TORQUE_READ, strDataChange);
 #endif
 	}
-
 	CDialogEx::OnTimer(nIDEvent);
 }
+
 
 void CMy01ASFunctionExampleCTorqueDlg::OnSysCommand(UINT nID, LPARAM lParam)
 {
@@ -217,6 +224,25 @@ void CMy01ASFunctionExampleCTorqueDlg::OnPaint()
 	{
 		CDialogEx::OnPaint();
 	}
+}
+HBRUSH CMy01ASFunctionExampleCTorqueDlg::OnCtlColor(CDC* pDC, CWnd* pWnd, UINT nCtlColor)
+{
+	HBRUSH hbr = CDialogEx::OnCtlColor(pDC, pWnd, nCtlColor);
+
+	// TODO:  여기서 DC의 특성을 변경합니다.
+	if (pWnd->GetDlgCtrlID() == IDC_STATIC_ALARM) {
+		if (m_dwAlarmOn) {
+			pDC->SetBkColor(RGB(255, 0, 0)); // 빨간색 배경
+			return (HBRUSH)GetStockObject(NULL_BRUSH);
+		}
+		else
+		{
+			pDC->SetBkColor(RGB(0, 0, 0)); 
+			return (HBRUSH)GetStockObject(NULL_BRUSH);
+		}
+	}
+	// TODO:  기본값이 적당하지 않으면 다른 브러시를 반환합니다.
+	return hbr;
 }
 
 // 사용자가 최소화된 창을 끄는 동안에 커서가 표시되도록 시스템에서
@@ -554,6 +580,21 @@ void CMy01ASFunctionExampleCTorqueDlg::OnBnClickedBtnTorquestop()
 	AxmMoveTorqueStop(TorqueAxis, dwMethod);
 }
 
+// ++====================================================================
+// >> OnBnClickedBtnAlarmclear()
+//    "Alarm Clear" 버튼 클릭 시 호출되는 핸들러 함수.
+// -- 선택된 보간축 중 2축을 이용해 연속 직선/원호보간을 하는 함수입니다.
+// ======================================================================
 
+void CMy01ASFunctionExampleCTorqueDlg::OnBnClickedBtnAlarmclear()
+{
+	// TODO: 여기에 컨트롤 알림 처리기 코드를 추가합니다.
+	long TorqueAxis = m_ComboTorqueAxis.GetCurSel();
 
-
+	if (m_dwAlarmOn)
+	{
+		AxmSignalServoAlarmReset(TorqueAxis, ENABLE);
+		AxmSignalServoAlarmReset(TorqueAxis, DISABLE);
+	}
+	GetDlgItem(IDC_STATIC_ALARM)->Invalidate();
+}
