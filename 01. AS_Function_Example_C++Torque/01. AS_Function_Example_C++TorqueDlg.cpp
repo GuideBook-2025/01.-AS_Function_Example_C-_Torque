@@ -85,6 +85,14 @@ void CMy01ASFunctionExampleCTorqueDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, IDC_COMBO_TorqueReadSet, m_ComboTorqueReadSet);
 	DDX_Control(pDX, IDC_COMBO_ECAT_TorqueReadSet, m_ComboEcatTorqueSet);
 	DDX_Control(pDX, IDC_COMBO_TARGET, m_ComboTorqueLimitTarget);
+	DDX_Control(pDX, IDC_EDIT_PTORQUE_LIMIT, m_EditPtorqueLimit);
+	DDX_Control(pDX, IDC_EDIT_MTORQUE_LIMIT, m_EditMtorqueLimit);
+	DDX_Control(pDX, IDC_COMBO_AccFiterSel, m_ComboAccFiterSel);
+	DDX_Control(pDX, IDC_COMBO_GainSel, m_ComboGainSel);
+	DDX_Control(pDX, IDC_COMBO_SpdLoopSel, m_ComboSpdLoopSel);
+	DDX_Control(pDX, IDC_EDIT_TorqueRead2, m_EditMaxTorque);
+	DDX_Control(pDX, IDC_EDIT_MAXVEL, m_EditMaxVel);
+	DDX_Control(pDX, IDC_COMBO_StopMethod, m_ComboStopMethod);
 }
 
 BEGIN_MESSAGE_MAP(CMy01ASFunctionExampleCTorqueDlg, CDialogEx)
@@ -92,6 +100,12 @@ BEGIN_MESSAGE_MAP(CMy01ASFunctionExampleCTorqueDlg, CDialogEx)
 	ON_WM_PAINT()
 	ON_WM_QUERYDRAGICON()
 	ON_BN_CLICKED(IDC_BTN_TorqueReadApply, &CMy01ASFunctionExampleCTorqueDlg::OnBnClickedBtnTorquReadApply)
+	ON_BN_CLICKED(IDC_BTN_TorqueLimitApply, &CMy01ASFunctionExampleCTorqueDlg::OnBnClickedBtnTorquelimitapply)
+	ON_BN_CLICKED(IDC_BTN_ECAT_TorqueReadApply, &CMy01ASFunctionExampleCTorqueDlg::OnBnClickedBtnEcatTorquereadapply)
+	ON_BN_CLICKED(IDC_BTN_TorqueStart, &CMy01ASFunctionExampleCTorqueDlg::OnBnClickedBtnTorquestart)
+	ON_BN_CLICKED(IDC_BTN_TorqueStop, &CMy01ASFunctionExampleCTorqueDlg::OnBnClickedBtnTorquestop)
+	ON_BN_CLICKED(IDC_CHECK_ServoOn, &CMy01ASFunctionExampleCTorqueDlg::OnBnClickedCheckServoon)
+	ON_WM_TIMER()
 END_MESSAGE_MAP()
 
 
@@ -134,8 +148,33 @@ BOOL CMy01ASFunctionExampleCTorqueDlg::OnInitDialog()
 		AddAxisInfo();
 		ControlInit();
 	}
+	SetTimer(UI_DATA_CHECK, 100, NULL);
 
 	return TRUE;  // 포커스를 컨트롤에 설정하지 않으면 TRUE를 반환합니다.
+}
+
+void CMy01ASFunctionExampleCTorqueDlg::OnTimer(UINT_PTR nIDEvent)
+{
+	// TODO: 여기에 메시지 처리기 코드를 추가 및/또는 기본값을 호출합니다.
+	if (nIDEvent == UI_DATA_CHECK)
+	{
+		double dTorque, dEcatTorque;
+		CString strDataChange;
+		long TorqueAxis = m_ComboTorqueAxis.GetCurSel();
+
+		AxmStatusReadServoLoadRatio(TorqueAxis, &dTorque);
+		strDataChange.Format("%f", dTorque);
+		SetDlgItemText(IDC_EDIT_TORQUE_READ, strDataChange);
+
+
+#if LIBTYPE == 5000
+		AxmStatusReadTorque(TorqueAxis, &dEcatTorque);
+		strDataChange.Format("%f", dEcatTorque);
+		SetDlgItemText(IDC_EDIT_ECAT_TORQUE_READ, strDataChange);
+#endif
+	}
+
+	CDialogEx::OnTimer(nIDEvent);
 }
 
 void CMy01ASFunctionExampleCTorqueDlg::OnSysCommand(UINT nID, LPARAM lParam)
@@ -391,8 +430,130 @@ void CMy01ASFunctionExampleCTorqueDlg::ControlInit(void)
 
 }
 
+void CMy01ASFunctionExampleCTorqueDlg::OnBnClickedCheckServoon()
+{
+	// TODO: 여기에 컨트롤 알림 처리기 코드를 추가합니다.
+	CString strValue;
+	long TorqueAxis = m_ComboTorqueAxis.GetCurSel();
+	DWORD dwReturn;
+	if (((CButton*)GetDlgItem(IDC_CHECK_ServoOn))->GetCheck())
+	{
+		dwReturn = AxmSignalServoOn(TorqueAxis, 1);
+		strValue.Format("%02ld번 축 Servo OFF", TorqueAxis);
+		((CButton*)GetDlgItem(IDC_CHECK_ServoOn))->SetWindowTextA(strValue);
+	}
+	else
+	{
+		dwReturn = AxmSignalServoOn(TorqueAxis, 0);
+		strValue.Format("%02ld번 축 Servo ON", TorqueAxis);
+		((CButton*)GetDlgItem(IDC_CHECK_ServoOn))->SetWindowTextA(strValue);
+	}
 
+}
+
+// ==============================================================================================================================================================
+// 지정 축의 부하율을 읽을 수 있도록 설정 합니다.(MLII : Sigma-5, SIIIH : MR_J4_xxB, RTEX : A5N, A6N 전용)
+// (MLII, Sigma-5, dwSelMon : 0 ~ 2) ==
+//     [0] : Accumulated load ratio(%)
+//     [1] : Regenerative load ratio(%)
+//     [2] : Reference Torque load ratio
+//     [3] : Motor rotation speed (rpm)
+// (SIIIH, MR_J4_xxB, dwSelMon : 0 ~ 4) ==
+//     [0] : Assumed load inertia ratio(0.1times)
+//     [1] : Regeneration load factor(%)
+//     [2] : Effective load factor(%)
+//     [3] : Peak load factor(%)
+//     [4] : Current feedback(0.1%)	
+//     [5] : Speed feedback(rpm)	
+// (RTEX, A5Nx, A6Nx, dwSelMon : 0 ~ 4) ==
+//     [0] : Command Torque(0.1%)
+//     [1] : Regenerative load ratio(0.1%)
+//     [2] : Overload ratio(0.1%)
+//     [3] : Inertia ratio(%)
+//     [4] : Actual speed(rpm)
+// (ECAT, dwSelMon : 2) ==
+//     [2] : Actual Torque(0.1%)
+// ==============================================================================================================================================================
 void CMy01ASFunctionExampleCTorqueDlg::OnBnClickedBtnTorquReadApply()
 {
 	// TODO: 여기에 컨트롤 알림 처리기 코드를 추가합니다.
+	long TorqueAxis = m_ComboTorqueAxis.GetCurSel();
+	DWORD RatioSet = m_ComboTorqueReadSet.GetCurSel();
+	AxmStatusSetReadServoLoadRatio(TorqueAxis, RatioSet);
 }
+
+void CMy01ASFunctionExampleCTorqueDlg::OnBnClickedBtnTorquelimitapply()
+{
+	// TODO: 여기에 컨트롤 알림 처리기 코드를 추가합니다.
+	CString strChange;
+	double dpTorqueLimit, dmTorqueLimit;
+	long TorqueAxis = m_ComboTorqueAxis.GetCurSel();
+
+	m_EditPtorqueLimit.GetWindowTextA(strChange);
+	dpTorqueLimit = atof(strChange);
+	m_EditMtorqueLimit.GetWindowTextA(strChange);
+	dmTorqueLimit = atof(strChange);
+
+	AxmMotSetTorqueLimit(TorqueAxis, dpTorqueLimit, dmTorqueLimit);
+}
+
+void CMy01ASFunctionExampleCTorqueDlg::OnBnClickedBtnEcatTorquereadapply()
+{
+	// TODO: 여기에 컨트롤 알림 처리기 코드를 추가합니다.
+	long TorqueAxis = m_ComboTorqueAxis.GetCurSel();
+	DWORD RatioSet = m_ComboEcatTorqueSet.GetCurSel();
+	AxmStatusSetReadServoLoadRatio(TorqueAxis, 2);
+}
+
+// ==============================================================================================================================================================
+// >> OnBnClickedButtonTorqueStart() : "TorqueStart" 버튼 클릭시 호출되는 핸들러 함수.
+//  - 최대 출력 토크(%), 최대 모터 구동속에 대한%값을 받아서 지정된 축에 토크구동을 한다.
+// 설정한 토크 및 속도 값으로 모터를 구동한다.(PCI-R1604-MLII/SIIIH, PCIe-Rxx04-SIIIH  전용 함수)
+// dTroque        : 최대 출력 토크에 대한 %값.     
+// 구동방향       : dTroque값이 양수이면 CW, 음수이면 CCW.
+// dVel           : 최대 모터 구동 속도에 대한 %값.
+// dwAccFilterSel : LINEAR_ACCDCEL(0), EXPO_ACCELDCEL(1), SCURVE_ACCELDECEL(2)
+// dwGainSel      : GAIN_1ST(0), GAIN_2ND(1)
+// dwSpdLoopSel   : PI_LOOP(0), P_LOOP(1)
+// PCIe-Rxx05-MLIII
+// dTorque        : 최대 출력 토크에 대한 %값 (단위: %)
+//                  dTorque 값이 양수지면 CW, 음수이면 CCW 방향으로 구동
+// dVel           : 구동 속도 (단위: pps)
+// dwAccFilterSel : 사용하지 않음
+// dwGainSel      : 사용하지 않음
+// dwSpdLoopSel   : 사용하지 않음
+
+// ※ EtherCAT Torque Start를 사용할 경우 주의 사항
+//  - EtherCAT제품의 경우 Torque구동에 들어가는 속도 인자값이 0x607F(Max Profile Velocity)에 적용되지 않아, PDO/SDO에 직접 값을 넣어줘야 속도가 조절 가능
+// ==============================================================================================================================================================
+void CMy01ASFunctionExampleCTorqueDlg::OnBnClickedBtnTorquestart()
+{
+	// TODO: 여기에 컨트롤 알림 처리기 코드를 추가합니다.
+	long TorqueAxis = m_ComboTorqueAxis.GetCurSel();
+	DWORD dwAccFirterSel = m_ComboAccFiterSel.GetCurSel();
+	DWORD dwGainSel = m_ComboGainSel.GetCurSel();
+	DWORD dwSpdLoopSel = m_ComboSpdLoopSel.GetCurSel();
+
+	CString strMaxTorque, strMaxVelTorque;
+	double dTorque, dVel;
+
+	m_EditMaxTorque.GetWindowTextA(strMaxVelTorque);
+	dTorque = atof(strMaxVelTorque);
+	m_EditMaxVel.GetWindowTextA(strMaxVelTorque);
+	dVel = atof(strMaxVelTorque);
+
+	AxmMoveStartTorque(TorqueAxis, dTorque, dVel, dwAccFirterSel, dwGainSel, dwSpdLoopSel);
+}
+
+void CMy01ASFunctionExampleCTorqueDlg::OnBnClickedBtnTorquestop()
+{
+	// TODO: 여기에 컨트롤 알림 처리기 코드를 추가합니다.
+	long TorqueAxis = m_ComboTorqueAxis.GetCurSel();
+	DWORD dwMethod = m_ComboStopMethod.GetCurSel();
+
+	AxmMoveTorqueStop(TorqueAxis, dwMethod);
+}
+
+
+
+

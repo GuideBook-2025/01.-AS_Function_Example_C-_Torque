@@ -46,4 +46,17 @@ public:
 	CComboBox m_ComboEcatTorqueSet;
 	CComboBox m_ComboTorqueLimitTarget;
 	afx_msg void OnBnClickedBtnTorquReadApply();
+	afx_msg void OnBnClickedBtnTorquelimitapply();
+	CEdit m_EditPtorqueLimit;
+	CEdit m_EditMtorqueLimit;
+	afx_msg void OnBnClickedBtnEcatTorquereadapply();
+	afx_msg void OnBnClickedBtnTorquestart();
+	CComboBox m_ComboAccFiterSel;
+	CComboBox m_ComboGainSel;
+	CComboBox m_ComboSpdLoopSel;
+	CEdit m_EditMaxTorque;
+	CEdit m_EditMaxVel;
+	afx_msg void OnBnClickedBtnTorquestop();
+	CComboBox m_ComboStopMethod;
+	afx_msg void OnBnClickedCheckServoon();
 };

@@ -12,10 +12,13 @@
 #define IDC_COMBO_TorqueReadSet         1005
 #define IDC_EDIT_TorqueRead             1006
 #define IDC_BTN_TorqueApply             1007
+#define IDC_BTN_ECAT_TorqueReadApply    1007
 #define IDC_BTN_TorqueStart             1008
 #define IDC_BTN_TorqueStop              1009
 #define IDC_EDIT_TorqueRead2            1010
+#define IDC_EDIT_MAXTORQUE              1010
 #define IDC_EDIT_TorqueRead3            1011
+#define IDC_EDIT_MAXVEL                 1011
 #define IDC_COMBO_AccFiterSel           1012
 #define IDC_COMBO_SpdLoopSel            1013
 #define IDC_COMBO_StopMethod            1014
@@ -25,8 +28,11 @@
 #define IDC_BTN_TorqueApply2            1018
 #define IDC_BTN_TorqueReadApply         1018
 #define IDC_BTN_TorqueApply3            1019
+#define IDC_BTN_TorqueLimitApply        1019
 #define IDC_EDIT1                       1020
+#define IDC_EDIT_PTORQUE_LIMIT          1020
 #define IDC_EDIT2                       1021
+#define IDC_EDIT_MTORQUE_LIMIT          1021
 #define IDC_COMBO_TARGET                1022
 #define IDC_EDIT_POS0                   1023
 #define IDC_EDIT_EPOS0                  1024
