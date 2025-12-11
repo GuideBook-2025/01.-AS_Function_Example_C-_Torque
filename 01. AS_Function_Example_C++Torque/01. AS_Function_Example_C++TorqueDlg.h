@@ -37,6 +37,7 @@ protected:
 	// ====== 여기부터 그래프 관련 멤버 ======
 	CRealTimeGraphCtrl m_Graph;   // 전용 그래프 컨트롤
 	double             m_dPhase;  // 테스트용 (sin 파형 위상)
+	void			   SetGraphIntialize();
 	// =======================================
 
 public:

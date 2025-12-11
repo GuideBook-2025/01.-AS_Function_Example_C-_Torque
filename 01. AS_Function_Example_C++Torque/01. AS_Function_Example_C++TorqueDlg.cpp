@@ -7,6 +7,7 @@
 #include "01. AS_Function_Example_C++Torque.h"
 #include "01. AS_Function_Example_C++TorqueDlg.h"
 #include "afxdialogex.h"
+#include <cmath> //테스트 헤더
 #define IDT_TIMER_GRAPH 1
 #define IDT_UI_DATA_CHECK 10
 
@@ -152,9 +153,9 @@ BOOL CMy01ASFunctionExampleCTorqueDlg::OnInitDialog()
 		AddAxisInfo();
 		ControlInit();
 	}
-
 	SetTimer(IDT_UI_DATA_CHECK, 100, NULL);
-
+	SetGraphIntialize();
+	SetTimer(IDT_TIMER_GRAPH, 30, nullptr);
 	return TRUE;  // 포커스를 컨트롤에 설정하지 않으면 TRUE를 반환합니다.
 }
 
@@ -182,6 +183,18 @@ void CMy01ASFunctionExampleCTorqueDlg::OnTimer(UINT_PTR nIDEvent)
 		SetDlgItemText(IDC_EDIT_ECAT_TORQUE_READ, strDataChange);
 #endif
 	}
+
+	if (nIDEvent == IDT_TIMER_GRAPH)
+	{
+		// [예제] sin 파형: 실제 환경에서는 여기서 서보/센서 값 읽기
+		m_dPhase += 0.1;
+		double dValue = std::sin(m_dPhase);
+
+		// 그래프 컨트롤에 데이터 전달
+		m_Graph.AddData(dValue);
+		// AddData 내부에서 Invalidate(FALSE)가 호출되어 OnPaint가 발생
+	}
+
 	CDialogEx::OnTimer(nIDEvent);
 }
 
@@ -587,7 +600,6 @@ void CMy01ASFunctionExampleCTorqueDlg::OnBnClickedBtnTorquestop()
 //    "Alarm Clear" 버튼 클릭 시 호출되는 핸들러 함수.
 // -- 선택된 보간축 중 2축을 이용해 연속 직선/원호보간을 하는 함수입니다.
 // ======================================================================
-
 void CMy01ASFunctionExampleCTorqueDlg::OnBnClickedBtnAlarmclear()
 {
 	// TODO: 여기에 컨트롤 알림 처리기 코드를 추가합니다.
@@ -599,4 +611,27 @@ void CMy01ASFunctionExampleCTorqueDlg::OnBnClickedBtnAlarmclear()
 		AxmSignalServoAlarmReset(TorqueAxis, DISABLE);
 	}
 	GetDlgItem(IDC_STATIC_ALARM)->Invalidate();
+}
+
+// ++====================================================================
+// >> SetGraphIntialize()
+//    "Line & Arc" 버튼 클릭 시 호출되는 핸들러 함수.
+// -- 선택된 보간축 중 2축을 이용해 연속 직선/원호보간을 하는 함수입니다.
+// ======================================================================
+void CMy01ASFunctionExampleCTorqueDlg::SetGraphIntialize()
+{
+	// 1) STATIC 컨트롤을 전용 그래프 컨트롤로 서브클래싱
+	m_Graph.SubclassDlgItem(IDC_STATIC_GRAPH, this);
+
+	// 2) 그래프 초기화
+	//    - 먼저 클라이언트 폭을 얻어와서 최대 포인트 개수로 사용 (예시)
+	CRect rcGraph;
+	m_Graph.GetClientRect(&rcGraph);
+
+	int nMaxPoints = rcGraph.Width();  // 픽셀 폭만큼 포인트 사용 (예시)
+	if (nMaxPoints <= 0)
+		nMaxPoints = 500;              // 혹시라도 0이면 기본값
+
+	// Y축 범위 예시: -1.0 ~ +1.0
+	m_Graph.Initialize(nMaxPoints, -1.0, 1.0);
 }
