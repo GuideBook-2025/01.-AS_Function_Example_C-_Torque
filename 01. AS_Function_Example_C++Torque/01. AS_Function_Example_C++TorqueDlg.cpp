@@ -82,12 +82,16 @@ void CMy01ASFunctionExampleCTorqueDlg::DoDataExchange(CDataExchange* pDX)
 {
 	CDialogEx::DoDataExchange(pDX);
 	DDX_Control(pDX, IDC_COMBO_MoveAxis, m_ComboTorqueAxis);
+	DDX_Control(pDX, IDC_COMBO_TorqueReadSet, m_ComboTorqueReadSet);
+	DDX_Control(pDX, IDC_COMBO_ECAT_TorqueReadSet, m_ComboEcatTorqueSet);
+	DDX_Control(pDX, IDC_COMBO_TARGET, m_ComboTorqueLimitTarget);
 }
 
 BEGIN_MESSAGE_MAP(CMy01ASFunctionExampleCTorqueDlg, CDialogEx)
 	ON_WM_SYSCOMMAND()
 	ON_WM_PAINT()
 	ON_WM_QUERYDRAGICON()
+	ON_BN_CLICKED(IDC_BTN_TorqueReadApply, &CMy01ASFunctionExampleCTorqueDlg::OnBnClickedBtnTorquReadApply)
 END_MESSAGE_MAP()
 
 
@@ -128,6 +132,7 @@ BOOL CMy01ASFunctionExampleCTorqueDlg::OnInitDialog()
 	if (m_lAxisCount > 1)
 	{
 		AddAxisInfo();
+		ControlInit();
 	}
 
 	return TRUE;  // 포커스를 컨트롤에 설정하지 않으면 TRUE를 반환합니다.
@@ -263,4 +268,131 @@ BOOL CMy01ASFunctionExampleCTorqueDlg::AddAxisInfo(void)
 		m_ComboTorqueAxis.AddString(strData);
 	}
 	return TRUE;
+}
+
+// ==============================================================================================================================================================
+// >> ControlInit() : 컨트롤들을 초기화 및 정보 갱신용 타이머 동작 하는 함수
+//  - 컨트롤들을 초기화 하고, 정보 갱신용 타이머를 50msec 주기로 동작시킵니다.
+// ==============================================================================================================================================================
+void CMy01ASFunctionExampleCTorqueDlg::ControlInit(void)
+{
+	m_ComboTorqueAxis.SetCurSel(0);
+
+	switch (m_dwModuleID)
+	{
+	case AXT_SMC_R1V04A5:
+		// (RTEX, A5Nx, A6Nx, dwSelMon : 0 ~ 4) ==
+		//     [0] : Command Torque(0.1%)
+		//     [1] : Regenerative load ratio(0.1%)
+		//     [2] : Overload ratio(0.1%)
+		//     [3] : Inertia ratio(%)
+		//     [4] : Actual speed(rpm)
+		m_ComboTorqueReadSet.AddString("0 : Command Torque(0.1%)");
+		m_ComboTorqueReadSet.AddString("1 : Regenerative load ratio(0.1%)");
+		m_ComboTorqueReadSet.AddString("2 : Overload ratio(0.1%)");
+		m_ComboTorqueReadSet.AddString("3 : Inertia ratio(%)");
+		m_ComboTorqueReadSet.AddString("4 : Actual speed(rpm)");
+		m_ComboTorqueReadSet.SetCurSel(0);
+		break;
+	case AXT_SMC_R1V04A6:
+		// (RTEX, A5Nx, A6Nx, dwSelMon : 0 ~ 4) ==
+		//     [0] : Command Torque(0.1%)
+		//     [1] : Regenerative load ratio(0.1%)
+		//     [2] : Overload ratio(0.1%)
+		//     [3] : Inertia ratio(%)
+		//     [4] : Actual speed(rpm)
+		m_ComboTorqueReadSet.AddString("0 : Command Torque(0.1%)");
+		m_ComboTorqueReadSet.AddString("1 : Regenerative load ratio(0.1%)");
+		m_ComboTorqueReadSet.AddString("2 : Overload ratio(0.1%)");
+		m_ComboTorqueReadSet.AddString("3 : Inertia ratio(%)");
+		m_ComboTorqueReadSet.AddString("4 : Actual speed(rpm)");
+		m_ComboTorqueReadSet.SetCurSel(0);
+		break;
+	case AXT_SMC_R1V04MLIISV:
+		// 지정 축의 부하율을 읽을 수 있도록 설정 합니다.(MLII : Sigma-5, SIIIH : MR_J4_xxB, RTEX : A5N, A6N 전용)
+		// (MLII, Sigma-5, dwSelMon : 0 ~ 2) ==
+		//     [0] : Accumulated load ratio(%)
+		//     [1] : Regenerative load ratio(%)
+		//     [2] : Reference Torque load ratio
+		//     [3] : Motor rotation speed (rpm)
+		m_ComboTorqueReadSet.AddString("0 : Accumlated load ratio(%)");
+		m_ComboTorqueReadSet.AddString("1 : Regenerative load ratio(%)");
+		m_ComboTorqueReadSet.AddString("2 : Reference Torque load ratio");
+		m_ComboTorqueReadSet.AddString("3 : Motor rotation speed (rpm)");
+		m_ComboTorqueReadSet.SetCurSel(0);
+		break;
+	case AXT_SMC_R1V04SIIIHMIV:
+		// (SIIIH, MR_J4_xxB, dwSelMon : 0 ~ 4) ==
+		//     [0] : Assumed load inertia ratio(0.1times)
+		//     [1] : Regeneration load factor(%)
+		//     [2] : Effective load factor(%)
+		//     [3] : Peak load factor(%)
+		//     [4] : Current feedback(0.1%)	
+		//     [5] : Speed feedback(rpm)	
+		m_ComboTorqueReadSet.AddString("0 : Assumed load inertia ratio(0.1times)");
+		m_ComboTorqueReadSet.AddString("1 : Regeneration load factor(%)");
+		m_ComboTorqueReadSet.AddString("2 : Effective load factor(%)");
+		m_ComboTorqueReadSet.AddString("3 : Peak load factor(%)");
+		m_ComboTorqueReadSet.AddString("4 : Current feedback(0.1%)");
+		m_ComboTorqueReadSet.AddString("5 : Speed feedback(rpm)");
+		m_ComboTorqueReadSet.SetCurSel(0);
+		break;
+	case AXT_SMC_R1V04SIIIHMIV_R:
+		// (SIIIH, MR_J4_xxB, dwSelMon : 0 ~ 4) ==
+		//     [0] : Assumed load inertia ratio(0.1times)
+		//     [1] : Regeneration load factor(%)
+		//     [2] : Effective load factor(%)
+		//     [3] : Peak load factor(%)
+		//     [4] : Current feedback(0.1%)	
+		//     [5] : Speed feedback(rpm)	
+		m_ComboTorqueReadSet.AddString("0 : Assumed load inertia ratio(0.1times)");
+		m_ComboTorqueReadSet.AddString("1 : Regeneration load factor(%)");
+		m_ComboTorqueReadSet.AddString("2 : Effective load factor(%)");
+		m_ComboTorqueReadSet.AddString("3 : Peak load factor(%)");
+		m_ComboTorqueReadSet.AddString("4 : Current feedback(0.1%)");
+		m_ComboTorqueReadSet.AddString("5 : Speed feedback(rpm)");
+		m_ComboTorqueReadSet.SetCurSel(0);
+		break;
+	}
+
+	m_ComboEcatTorqueSet.AddString("00 : Actual Torque(0.1%)");
+	m_ComboEcatTorqueSet.SetCurSel(0);
+
+	m_ComboTorqueLimitTarget.AddString("00 : 목표 위치 기준");
+	m_ComboTorqueLimitTarget.AddString("01 : 실제 위치 기준");
+	m_ComboTorqueLimitTarget.SetCurSel(0);
+
+	SetDlgItemText(IDC_EDIT_POS0, "POS: 0");
+	SetDlgItemText(IDC_EDIT_POS1, "POS:1");
+	SetDlgItemText(IDC_EDIT_POS2, "POS:2");
+	SetDlgItemText(IDC_EDIT_POS3, "POS:3");
+	SetDlgItemText(IDC_EDIT_POS4, "POS:4");
+	SetDlgItemText(IDC_EDIT_POS5, "POS:5");
+	SetDlgItemText(IDC_EDIT_POS6, "POS:6");
+	SetDlgItemText(IDC_EDIT_POS7, "POS:7");
+
+	SetDlgItemText(IDC_EDIT_PTORQUELIMIT0, "PPOS:0");
+	SetDlgItemText(IDC_EDIT_PTORQUELIMIT1, "PPOS:1");
+	SetDlgItemText(IDC_EDIT_PTORQUELIMIT2, "PPOS:2");
+	SetDlgItemText(IDC_EDIT_PTORQUELIMIT3, "PPOS:3");
+	SetDlgItemText(IDC_EDIT_PTORQUELIMIT4, "PPOS:4");
+	SetDlgItemText(IDC_EDIT_PTORQUELIMIT5, "PPOS:5");
+	SetDlgItemText(IDC_EDIT_PTORQUELIMIT6, "PPOS:6");
+	SetDlgItemText(IDC_EDIT_PTORQUELIMIT7, "PPOS:7");
+
+	SetDlgItemText(IDC_EDIT_MTORQUELIMIT0, "MPOS:0");
+	SetDlgItemText(IDC_EDIT_MTORQUELIMIT1, "MPOS:1");
+	SetDlgItemText(IDC_EDIT_MTORQUELIMIT2, "MPOS:2");
+	SetDlgItemText(IDC_EDIT_MTORQUELIMIT3, "MPOS:3");
+	SetDlgItemText(IDC_EDIT_MTORQUELIMIT4, "MPOS:4");
+	SetDlgItemText(IDC_EDIT_MTORQUELIMIT5, "MPOS:5");
+	SetDlgItemText(IDC_EDIT_MTORQUELIMIT6, "MPOS:6");
+	SetDlgItemText(IDC_EDIT_MTORQUELIMIT7, "MPOS:7");
+
+}
+
+
+void CMy01ASFunctionExampleCTorqueDlg::OnBnClickedBtnTorquReadApply()
+{
+	// TODO: 여기에 컨트롤 알림 처리기 코드를 추가합니다.
 }

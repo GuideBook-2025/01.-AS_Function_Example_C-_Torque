@@ -39,7 +39,11 @@ public:
 	long m_lAxisCount;
 	long m_lAxisNo;
 	DWORD m_dwModuleID;
-
+	void ControlInit(void);
 
 	CComboBox m_ComboTorqueAxis;
+	CComboBox m_ComboTorqueReadSet;
+	CComboBox m_ComboEcatTorqueSet;
+	CComboBox m_ComboTorqueLimitTarget;
+	afx_msg void OnBnClickedBtnTorquReadApply();
 };
