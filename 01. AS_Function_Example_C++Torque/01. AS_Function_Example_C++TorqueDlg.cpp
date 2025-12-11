@@ -111,6 +111,7 @@ BEGIN_MESSAGE_MAP(CMy01ASFunctionExampleCTorqueDlg, CDialogEx)
 	ON_WM_TIMER()
 	ON_WM_CTLCOLOR()
 	ON_BN_CLICKED(IDC_BTN_ALARMCLEAR, &CMy01ASFunctionExampleCTorqueDlg::OnBnClickedBtnAlarmclear)
+	ON_WM_SIZE()
 END_MESSAGE_MAP()
 
 
@@ -155,7 +156,7 @@ BOOL CMy01ASFunctionExampleCTorqueDlg::OnInitDialog()
 	}
 	SetTimer(IDT_UI_DATA_CHECK, 100, NULL);
 	SetGraphIntialize();
-	SetTimer(IDT_TIMER_GRAPH, 30, nullptr);
+	SetTimer(IDT_TIMER_GRAPH, 120, nullptr);
 	return TRUE;  // 포커스를 컨트롤에 설정하지 않으면 TRUE를 반환합니다.
 }
 
@@ -191,7 +192,8 @@ void CMy01ASFunctionExampleCTorqueDlg::OnTimer(UINT_PTR nIDEvent)
 		double dValue = std::sin(m_dPhase);
 
 		// 그래프 컨트롤에 데이터 전달
-		m_Graph.AddData(dValue);
+		if (m_Graph.AddData(dValue))
+			TRACE(_T("hello"));
 		// AddData 내부에서 Invalidate(FALSE)가 호출되어 OnPaint가 발생
 	}
 
@@ -622,7 +624,7 @@ void CMy01ASFunctionExampleCTorqueDlg::SetGraphIntialize()
 {
 	// 1) STATIC 컨트롤을 전용 그래프 컨트롤로 서브클래싱
 	m_Graph.SubclassDlgItem(IDC_STATIC_GRAPH, this);
-
+		
 	// 2) 그래프 초기화
 	//    - 먼저 클라이언트 폭을 얻어와서 최대 포인트 개수로 사용 (예시)
 	CRect rcGraph;
@@ -634,4 +636,11 @@ void CMy01ASFunctionExampleCTorqueDlg::SetGraphIntialize()
 
 	// Y축 범위 예시: -1.0 ~ +1.0
 	m_Graph.Initialize(nMaxPoints, -1.0, 1.0);
+}
+
+void CMy01ASFunctionExampleCTorqueDlg::OnSize(UINT nType, int cx, int cy)
+{
+	CDialogEx::OnSize(nType, cx, cy);
+
+	// TODO: 여기에 메시지 처리기 코드를 추가합니다.
 }
