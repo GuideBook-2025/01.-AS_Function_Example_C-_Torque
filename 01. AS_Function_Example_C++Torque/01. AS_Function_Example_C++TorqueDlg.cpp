@@ -11,12 +11,28 @@
 #define IDT_TIMER_GRAPH 1
 #define IDT_UI_DATA_CHECK 10
 
+// 그래프 출력
+#define GRAPH_Y_MIN		-30000
+#define GRAPH_Y_MAX		30000
+
+// 테스트 중 모션 이동
+#define ZPOS			7000
+#define VELOCITY		500
+#define ACCEL			500
+#define DECEL			500
+#define PLUS_DIRECTION	 1
+#define MINUS_DIRECTION	-1
+// 테스트 중 토크 구동 
+// 1:1 UnitPerSec 기준 500Unit/sec  , 2000 토크
+
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
 
-#define	TM_DISPLAY		100
-#define	LIBTYPE			4000  //ECAT Lib : 5000  / 범용제품 : 4000 에 따라 선택	
+#define	TM_DISPLAY		20	
+#define	LIBTYPE			4000  //ECAT Lib : 5000  / 범용제품 : 4000 에 따라 선택
+// --------------------------------------------------------------------------
+
 // ++ =======================================================================
 // >> AXL(AjineXtek Library) 관련 Header파일 포함시킵니다.
 // ※ [CAUTION] 예제를 복사하여 다른 위치에서 실행시 참조경로 변경이 필요합니다.
@@ -77,6 +93,7 @@ END_MESSAGE_MAP()
 CMy01ASFunctionExampleCTorqueDlg::CMy01ASFunctionExampleCTorqueDlg(CWnd* pParent /*=nullptr*/)
 	: CDialogEx(IDD_MY01_AS_FUNCTION_EXAMPLE_CTORQUE_DIALOG, pParent)
 	, m_dPhase(0.0)
+	, m_TorqueSetupFlags(0)
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
 }
@@ -112,6 +129,8 @@ BEGIN_MESSAGE_MAP(CMy01ASFunctionExampleCTorqueDlg, CDialogEx)
 	ON_WM_CTLCOLOR()
 	ON_BN_CLICKED(IDC_BTN_ALARMCLEAR, &CMy01ASFunctionExampleCTorqueDlg::OnBnClickedBtnAlarmclear)
 	ON_WM_SIZE()
+	ON_BN_CLICKED(IDC_BTN_TORQUETEST, &CMy01ASFunctionExampleCTorqueDlg::OnBnClickedBtnTorquetest)
+	ON_BN_CLICKED(IDC_CHECK_ServoOn2, &CMy01ASFunctionExampleCTorqueDlg::OnBnClickedCheckServoon2)
 END_MESSAGE_MAP()
 
 
@@ -153,10 +172,15 @@ BOOL CMy01ASFunctionExampleCTorqueDlg::OnInitDialog()
 	{
 		AddAxisInfo();
 		ControlInit();
+		InitAxis();
 	}
-	SetTimer(IDT_UI_DATA_CHECK, 100, NULL);
+	SetTimer(IDT_UI_DATA_CHECK, TM_DISPLAY, NULL);
+	
 	SetGraphIntialize();
-	SetTimer(IDT_TIMER_GRAPH, 120, nullptr);
+	SetTimer(IDT_TIMER_GRAPH, 20, nullptr);
+
+	Sleep(500);
+
 	return TRUE;  // 포커스를 컨트롤에 설정하지 않으면 TRUE를 반환합니다.
 }
 
@@ -184,16 +208,14 @@ void CMy01ASFunctionExampleCTorqueDlg::OnTimer(UINT_PTR nIDEvent)
 		SetDlgItemText(IDC_EDIT_ECAT_TORQUE_READ, strDataChange);
 #endif
 	}
-
 	if (nIDEvent == IDT_TIMER_GRAPH)
 	{
 		// [예제] sin 파형: 실제 환경에서는 여기서 서보/센서 값 읽기
-		m_dPhase += 0.1;
-		double dValue = std::sin(m_dPhase);
-
+		double dGetActPos;
+		long TorqueAxis = m_ComboTorqueAxis.GetCurSel();
+		AxmStatusGetActPos(TorqueAxis, &dGetActPos);
 		// 그래프 컨트롤에 데이터 전달
-		if (m_Graph.AddData(dValue))
-			TRACE(_T("hello"));
+		m_Graph.AddData(dGetActPos);
 		// AddData 내부에서 Invalidate(FALSE)가 호출되어 OnPaint가 발생
 	}
 
@@ -523,6 +545,7 @@ void CMy01ASFunctionExampleCTorqueDlg::OnBnClickedBtnTorquReadApply()
 	long TorqueAxis = m_ComboTorqueAxis.GetCurSel();
 	DWORD RatioSet = m_ComboTorqueReadSet.GetCurSel();
 	AxmStatusSetReadServoLoadRatio(TorqueAxis, RatioSet);
+	m_TorqueSetupFlags |= TORQUE_LOAD_RATIO;
 }
 
 void CMy01ASFunctionExampleCTorqueDlg::OnBnClickedBtnTorquelimitapply()
@@ -538,6 +561,8 @@ void CMy01ASFunctionExampleCTorqueDlg::OnBnClickedBtnTorquelimitapply()
 	dmTorqueLimit = atof(strChange);
 
 	AxmMotSetTorqueLimit(TorqueAxis, dpTorqueLimit, dmTorqueLimit);
+	m_TorqueSetupFlags |= TORQUE_LIMIT;
+	
 }
 
 void CMy01ASFunctionExampleCTorqueDlg::OnBnClickedBtnEcatTorquereadapply()
@@ -546,6 +571,8 @@ void CMy01ASFunctionExampleCTorqueDlg::OnBnClickedBtnEcatTorquereadapply()
 	long TorqueAxis = m_ComboTorqueAxis.GetCurSel();
 	DWORD RatioSet = m_ComboEcatTorqueSet.GetCurSel();
 	AxmStatusSetReadServoLoadRatio(TorqueAxis, 2);
+
+	m_TorqueSetupFlags |= TORQUE_ECAT_LOAD_RATIO;
 }
 
 // ==============================================================================================================================================================
@@ -572,6 +599,17 @@ void CMy01ASFunctionExampleCTorqueDlg::OnBnClickedBtnEcatTorquereadapply()
 void CMy01ASFunctionExampleCTorqueDlg::OnBnClickedBtnTorquestart()
 {
 	// TODO: 여기에 컨트롤 알림 처리기 코드를 추가합니다.
+	if (CheckTorqueSetup())
+		return;
+	
+	//테스트 비활성화 (버튼기능)
+	m_TorqueSetupFlags &= ~TORQUE_START_TEST;
+	TorqueStart(PLUS_DIRECTION);
+}
+
+void CMy01ASFunctionExampleCTorqueDlg::TorqueStart(bool bDirection = TRUE)
+{
+	// TODO: 여기에 컨트롤 알림 처리기 코드를 추가합니다.
 	long TorqueAxis = m_ComboTorqueAxis.GetCurSel();
 	DWORD dwAccFirterSel = m_ComboAccFiterSel.GetCurSel();
 	DWORD dwGainSel = m_ComboGainSel.GetCurSel();
@@ -579,15 +617,19 @@ void CMy01ASFunctionExampleCTorqueDlg::OnBnClickedBtnTorquestart()
 
 	CString strMaxTorque, strMaxVelTorque;
 	double dTorque, dVel;
+	double dTestPlusVel, dTestMinusVel;
 
 	m_EditMaxTorque.GetWindowTextA(strMaxVelTorque);
 	dTorque = atof(strMaxVelTorque);
 	m_EditMaxVel.GetWindowTextA(strMaxVelTorque);
 	dVel = atof(strMaxVelTorque);
 
-	AxmMoveStartTorque(TorqueAxis, dTorque, dVel, dwAccFirterSel, dwGainSel, dwSpdLoopSel);
-}
+	if (bDirection == PLUS_DIRECTION)
+		AxmMoveStartTorque(TorqueAxis, dTorque, dVel, dwAccFirterSel, dwGainSel, dwSpdLoopSel);
+	else if (bDirection == MINUS_DIRECTION)
+		AxmMoveStartTorque(TorqueAxis, dTorque, -dVel, dwAccFirterSel, dwGainSel, dwSpdLoopSel);
 
+}
 void CMy01ASFunctionExampleCTorqueDlg::OnBnClickedBtnTorquestop()
 {
 	// TODO: 여기에 컨트롤 알림 처리기 코드를 추가합니다.
@@ -635,7 +677,7 @@ void CMy01ASFunctionExampleCTorqueDlg::SetGraphIntialize()
 		nMaxPoints = 500;              // 혹시라도 0이면 기본값
 
 	// Y축 범위 예시: -1.0 ~ +1.0
-	m_Graph.Initialize(nMaxPoints, -1.0, 1.0);
+	m_Graph.Initialize(nMaxPoints, GRAPH_Y_MIN, GRAPH_Y_MAX);
 }
 
 void CMy01ASFunctionExampleCTorqueDlg::OnSize(UINT nType, int cx, int cy)
@@ -643,4 +685,218 @@ void CMy01ASFunctionExampleCTorqueDlg::OnSize(UINT nType, int cx, int cy)
 	CDialogEx::OnSize(nType, cx, cy);
 
 	// TODO: 여기에 메시지 처리기 코드를 추가합니다.
+}
+
+void CMy01ASFunctionExampleCTorqueDlg::InitAxis()
+{
+	long TorqueAxis = m_ComboTorqueAxis.GetCurSel();
+	AxmStatusSetPosMatch(TorqueAxis, 0);
+}
+
+
+
+// ++====================================================================
+// >> RunCompressionTest();
+//	  0. 초기 위치 이동 ( Home ) 
+//	  1. Z - 위치이동 (ActPos기준 시퀀스)
+//			a) Stop 
+//			b) ReadGetActPos
+//			c) SetCmdPos( 현재위치 ) 
+//			d) 위치구동
+//			e) InMotion
+//    2. 토크구동 이전 설정
+//			a) Load -> LimitApply 
+//				주의사항) -Limit이 Max토크보다 커야함
+//	  3. 토크(정방향)구동
+//			a) TorqueStart 정방향
+//			b) TorqueStop 토크가 몇이상일때 3초간 유지
+//				(-Limit 이 해당 토크보다 커야함)
+//				(
+//    4. 토크(역방향)구동
+//			a) TorqueStart 역방향
+//			b) rpm에 따른 위치값 도출하여 정지
+//	  5. 위치구동
+//			Z - 위치구동 시퀀스를 적용하여 7천까지 도착
+// ======================================================================
+void CMy01ASFunctionExampleCTorqueDlg::RunCompressionTest()
+{
+	long TorqueAxis = m_ComboTorqueAxis.GetCurSel();
+
+   
+	//	  0. 초기 위치 이동 ( Home ) 
+	// RelMode로 전환 ( Init쪽에서 해줘야함 )
+	// 나중에
+	
+	//	1. Z - 위치이동 (ActPos기준 시퀀스)
+	//	a) Stop (SStop, Torque Stop)
+	MoveStop();
+	//	b) 위치구동 (ReadGetActPos-> SetCmdPos-> AxmMoveStartPos)
+	PositionMove(ZPOS, VELOCITY, ACCEL, DECEL);
+
+	//   2. 토크구동 이전 설정
+	//		a) Load -> LimitApply 
+	if (CheckTorqueSetup())
+		return;
+
+	//	3. 토크(정방향)구동
+	//		a) TorqueStart 정방향
+	//		b) TorqueStop 토크가 몇이상일때 3초간 유지
+	//			(-Limit 이 해당 토크보다 커야함)
+	// 테스트 기능 
+	TorqueStart(PLUS_DIRECTION);
+
+
+	//  4. 프레스 위치 도착 확인 
+	// 최소의 토크값을 넘길 경우 프레스로 판단하고 3초간 정지
+	// 시간이 너무 길어질 경우 CheckTorqueMin() 내부에서 DONE Flag = Flase 처리
+	while(CheckTorqueMin())  //<< 추가
+	{
+		Sleep(1);
+	}
+	if (m_TorqueSetupFlags & TORQUE_DONE == 0)
+	{
+		MessageBox("많은 시간이 지체되어 위험하다 판단하여 중단");
+		MoveStop();
+		return;
+	}
+
+	// 5. 프레스 도착 후 3초대기 
+	MoveStop();
+	Sleep(3000);
+
+	//  6. 토크(역방향)구동
+	//  	a) TorqueStart 역방향
+	//	    b) rpm에 따른 위치값 도출하여 정지
+	TorqueStart(MINUS_DIRECTION);
+	Sleep(3000);
+	MoveStop();
+	InMotionCheck();
+
+	//  5. 위치구동
+	//		Z - 위치구동 시퀀스를 적용하여 7천까지 도착
+	PositionMove(ZPOS, VELOCITY, ACCEL, DECEL);
+	
+}
+void CMy01ASFunctionExampleCTorqueDlg::InMotionCheck()
+{
+	long TorqueAxis = m_ComboTorqueAxis.GetCurSel();
+	DWORD uStatus;
+	DWORD dwRet;
+
+	uStatus = 0x01;
+	while(uStatus == 0x01) // 0x00 = 구동 완료 , 0x01 = 구동 중 
+	{
+		dwRet = AxmStatusReadInMotion(TorqueAxis, &uStatus);
+
+	}
+}
+//사용후 삭제 
+void WaitWithMessagePump(int axis)
+{
+	DWORD uStatus = 1;
+
+	while (uStatus)
+	{
+		AxmStatusReadInMotion(axis, &uStatus);
+
+		MSG msg;
+		while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
+		{
+			TranslateMessage(&msg);
+			DispatchMessage(&msg);
+		}
+
+		Sleep(1);
+	}
+}
+
+
+void CMy01ASFunctionExampleCTorqueDlg::MoveStop()
+{
+	long TorqueAxis = m_ComboTorqueAxis.GetCurSel();
+	DWORD dwMethod = m_ComboStopMethod.GetCurSel();
+
+	CString str;
+	DWORD dwRet;
+	dwRet = AxmMoveEStop(TorqueAxis);
+	if(dwRet != AXT_RT_SUCCESS)
+	{
+		str.Format(_T("%ld"),dwRet);
+		AfxMessageBox(str);
+	}
+	dwRet = AxmMoveTorqueStop(TorqueAxis, dwMethod);
+	if (dwRet != AXT_RT_SUCCESS)
+	{
+		str.Format(_T("%ld"), dwRet);
+		AfxMessageBox(str);
+	}
+	InMotionCheck();
+}
+
+void CMy01ASFunctionExampleCTorqueDlg::PositionMove(double dPos, double dVel, double dAcc, double dDec)
+{
+	long TorqueAxis = m_ComboTorqueAxis.GetCurSel();
+	double dGetActPos;
+	double dSetCmdPos;
+
+	AxmStatusGetActPos(TorqueAxis, &dGetActPos);
+	
+	dSetCmdPos = dGetActPos;
+	AxmStatusSetCmdPos(TorqueAxis, dSetCmdPos);
+
+	AxmMoveStartPos(TorqueAxis, dPos, dVel, dAcc, dDec);
+	InMotionCheck();
+}
+
+// ++=======================================================================
+// >> CheckTorqueSetup()
+//    토크 구동 전 세팅이 완료되어 토크 구동이 가능한지 확인하는 함수입니다.
+// -- Torque_Read 설정 및 Torque Limit 설정 여부를 확인합니다.
+// =========================================================================
+BOOL CMy01ASFunctionExampleCTorqueDlg::CheckTorqueSetup()
+{
+	constexpr uint32_t TORQUE_REQUIRED_MASK =
+		TORQUE_LOAD_RATIO
+		| TORQUE_LIMIT;
+	
+	if ((m_TorqueSetupFlags & TORQUE_REQUIRED_MASK) != TORQUE_REQUIRED_MASK)
+	{
+		if ((m_TorqueSetupFlags & TORQUE_LOAD_RATIO) == 0)
+			MessageBox("Torque Read를 먼저 설정하십시오.");
+
+		if ((m_TorqueSetupFlags & TORQUE_LIMIT) == 0)
+			MessageBox("Torque Limit을 먼저 설정하십시오.");
+
+		return TRUE;
+	}
+	else
+	{
+		// 모든 조건 충족 → 진행
+		return 0;
+	}
+	
+}
+
+bool CMy01ASFunctionExampleCTorqueDlg::CheckTorqueMin()
+{
+	//return true;  오류
+	// <<<  추가 
+
+	Sleep(3000);
+	m_TorqueSetupFlags |= TORQUE_DONE;
+
+	return 0; // 정상종료
+}
+
+void CMy01ASFunctionExampleCTorqueDlg::OnBnClickedBtnTorquetest()
+{
+	// TODO: 여기에 컨트롤 알림 처리기 코드를 추가합니다.
+	RunCompressionTest();
+}
+
+void CMy01ASFunctionExampleCTorqueDlg::OnBnClickedCheckServoon2()
+{
+	// TODO: 여기에 컨트롤 알림 처리기 코드를 추가합니다.
+	long TorqueAxis = m_ComboTorqueAxis.GetCurSel();
+	AxmStatusSetPosMatch(TorqueAxis, 0);
 }

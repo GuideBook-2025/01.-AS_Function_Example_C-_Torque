@@ -291,7 +291,7 @@ int CRealTimeGraphCtrl::ValueToY(double dValue) const
 
 	// t 범위 클램프(안전성 확보)
 	//  그래프 값이 범위를 벗어나더라도 y좌표는 화면 안에서 유지
-	t = max(0.0, min(1.0, t));
+	//t = max(0.0, min(1.0, t));
 
 	// 클라이언트 높이
 	int height = m_rcClient.Height();

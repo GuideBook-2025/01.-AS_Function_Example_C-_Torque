@@ -5,6 +5,17 @@
 #pragma once
 
 #include "CRealTimeGraphCtrl.h"   // 그래프 클래스 헤더 포함
+enum TorqueFlag
+{
+	TORQUE_NONE = 0,
+	TORQUE_LOAD_RATIO = 1 << 0,
+	TORQUE_LIMIT = 1 << 1,
+	TORQUE_ECAT_LOAD_RATIO = 1 << 2,
+	TORQUE_ECAT_LIMIT = 1 << 3,
+	TORQUE_DONE = 1 <<4,
+	TORQUE_START_TEST = 1 << 5,
+	TORQUE_TEST_PLUS = 1 << 6
+};
 
 // CMy01ASFunctionExampleCTorqueDlg 대화 상자
 class CMy01ASFunctionExampleCTorqueDlg : public CDialogEx
@@ -72,4 +83,19 @@ public:
 	DWORD m_dwAlarmOn;
 	afx_msg void OnBnClickedBtnAlarmclear();
 	afx_msg void OnSize(UINT nType, int cx, int cy);
+	
+	void InitAxis();
+	void InMotionCheck();
+	void MoveStop();
+	void PositionMove(double dPos, double dVel, double dAcc, double dDec);
+	BOOL CheckTorqueSetup();  
+	DWORD m_TorqueSetupFlags;
+	void RunCompressionTest();
+	void TorqueStart(bool bDirection);
+	bool CheckTorqueMin();
+	afx_msg void OnBnClickedBtnTorquetest();
+	afx_msg void OnBnClickedCheckServoon2();
+	void WaitWithMessagePump(int axis);
+
+
 };

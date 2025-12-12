@@ -9,6 +9,7 @@
 #define IDR_MAINFRAME                   128
 #define IDC_COMBO_MoveAxis              1001
 #define IDC_CHECK_ServoOn               1003
+#define IDC_CHECK_ServoOn2              1004
 #define IDC_COMBO_TorqueReadSet         1005
 #define IDC_EDIT_TorqueRead             1006
 #define IDC_BTN_TorqueApply             1007
@@ -56,6 +57,7 @@
 #define IDC_STATIC_ALARM                1042
 #define IDC_BTN_ALARMCLEAR              1043
 #define IDC_STATIC_GRAPH                1044
+#define IDC_BTN_TORQUETEST              1045
 #define IDC_EDIT_PTORQUELIMIT0          1059
 #define IDC_EDIT_ENDPOS0                1060
 #define IDC_EDIT_ENDPOS1                1061
